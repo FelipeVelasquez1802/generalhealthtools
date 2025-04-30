@@ -28,10 +28,10 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build with Gradle
-        run: ./gradlew packageReleaseDistributionForCurrentOS
+        run: ./gradlew packageMsi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-app
-          path: build/compose/binaries/main-release/
+          path: build/compose/binaries/main/
