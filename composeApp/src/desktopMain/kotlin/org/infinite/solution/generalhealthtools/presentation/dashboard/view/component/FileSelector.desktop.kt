@@ -5,9 +5,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.awt.FileDialog
 import java.io.File
+import java.security.KeyFactory
 import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.SecureRandom
+import java.security.spec.X509EncodedKeySpec
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
@@ -51,22 +53,36 @@ internal actual class FileManager actual constructor() {
         val iv = ByteArray(ivSize)
         SecureRandom().nextBytes(iv)
 
-        val rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding")
-        rsaCipher.init(Cipher.ENCRYPT_MODE, keyPair.public)
-        val encryptedAesKey = rsaCipher.doFinal(aesKey)
-
-        val aesCipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
-        val secretKeySpec = SecretKeySpec(aesKey, "AES")
-        val ivParameterSpec = IvParameterSpec(iv)
-        aesCipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, ivParameterSpec)
-
-        val encryptedContent = aesCipher.doFinal(fileBytes)
-
         return EncryptedData(
-            encryptedContent = encryptedContent,
-            encryptedAesKey = encryptedAesKey,
+            encryptedContent = cipherAES(fileBytes, aesKey, iv),
+            encryptedAesKey = cipherRSA(aesKey, keyPair.public.encoded),
             iv = iv,
         )
+    }
+
+    private fun cipherRSA(
+        fileBytes: ByteArray,
+        publicKey: ByteArray,
+    ): ByteArray {
+        val keySpec = X509EncodedKeySpec(publicKey)
+        val keyFactory = KeyFactory.getInstance("RSA")
+        val publicKeyGenerated = keyFactory.generatePublic(keySpec)
+
+        val cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding")
+        cipher.init(Cipher.ENCRYPT_MODE, publicKeyGenerated)
+        return cipher.doFinal(fileBytes)
+    }
+
+    private fun cipherAES(
+        fileBytes: ByteArray,
+        encryptedAesKey: ByteArray,
+        iv: ByteArray
+    ): ByteArray {
+        val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
+        val secretKeySpec = SecretKeySpec(encryptedAesKey, "AES")
+        val ivParameterSpec = IvParameterSpec(iv)
+        cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, ivParameterSpec)
+        return cipher.doFinal(fileBytes)
     }
 
     actual suspend fun saveEncryptedFile(
@@ -76,7 +92,7 @@ internal actual class FileManager actual constructor() {
         try {
             val saveDialog = FileDialog(ComposeWindow()).apply {
                 mode = FileDialog.SAVE
-                file = "${fileName}.encrypted"
+                file = "${fileName}.enc"
                 isVisible = true
             }
             if (saveDialog.file != null) {
@@ -94,7 +110,7 @@ internal actual class FileManager actual constructor() {
             } else {
                 false
             }
-        } catch (exception: Exception) {
+        } catch (_: Exception) {
             false
         }
     }
