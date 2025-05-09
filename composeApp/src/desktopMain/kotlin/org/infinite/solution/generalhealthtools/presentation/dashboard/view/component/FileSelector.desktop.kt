@@ -19,6 +19,7 @@ internal actual class FileManager actual constructor() {
     private lateinit var keyPair: KeyPair
     private val ivSize = 16
     private val keySize = 256
+    private val rsaKeySize = 2048
 
     init {
         initializeRSAKeys()
@@ -68,7 +69,7 @@ internal actual class FileManager actual constructor() {
         val keyFactory = KeyFactory.getInstance("RSA")
         val publicKeyGenerated = keyFactory.generatePublic(keySpec)
 
-        val cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding")
+        val cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding")
         cipher.init(Cipher.ENCRYPT_MODE, publicKeyGenerated)
         return cipher.doFinal(fileBytes)
     }
@@ -125,7 +126,7 @@ internal actual class FileManager actual constructor() {
 
     private fun initializeRSAKeys() {
         val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
-        keyPairGenerator.initialize(2048)
+        keyPairGenerator.initialize(rsaKeySize)
         keyPair = keyPairGenerator.generateKeyPair()
     }
 
