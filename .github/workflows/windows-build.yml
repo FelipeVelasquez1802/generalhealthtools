@@ -36,5 +36,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-app
+          name: general-health-tools-0.0.1
           path: composeApp/build/compose/binaries/main/msi/
