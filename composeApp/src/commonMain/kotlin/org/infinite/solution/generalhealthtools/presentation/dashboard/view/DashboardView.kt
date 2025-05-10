@@ -15,7 +15,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -101,7 +100,7 @@ private fun Pages(
 @Composable
 private fun EncryptPage(state: DashboardContract.State, viewModel: DashboardViewModel) {
     val scope = rememberCoroutineScope()
-    val fileSelector by remember { mutableStateOf(FileManager()) }
+//    val fileSelector by remember { mutableStateOf(FileManager.getInstance(state.pubicKey)) }
     Text(text = "Encrypt page")
     LazyRow(
         modifier = Modifier
@@ -113,7 +112,7 @@ private fun EncryptPage(state: DashboardContract.State, viewModel: DashboardView
         item {
             ButtonComponent(text = "Choose file...") {
                 scope.launch {
-                    val selectedFile = fileSelector.selectFile()
+                    val selectedFile = state.fileManager?.selectFile()
                     selectedFile?.let {
                         viewModel.setFileHandleChange(it)
                     }
@@ -137,12 +136,14 @@ private fun EncryptPage(state: DashboardContract.State, viewModel: DashboardView
                     .isNotEmpty()
             ) {
                 scope.launch {
-                    val encryptedData = fileSelector
-                        .encryptFile(state.fileHandle?.bytes ?: ByteArray(0))
-                    fileSelector.saveEncryptedFile(
-                        encryptedData, state.fileHandle?.name
-                            .orEmpty()
-                    )
+                    val encryptedData = state.fileManager
+                        ?.encryptFile(state.fileHandle?.bytes ?: ByteArray(0))
+                    encryptedData?.let {
+                        state.fileManager.saveEncryptedFile(
+                            it, state.fileHandle?.name
+                                .orEmpty()
+                        )
+                    }
                 }
             }
         }
@@ -155,7 +156,7 @@ private fun ChangeExtensionPage(
     viewModel: DashboardViewModel
 ) {
     val scope = rememberCoroutineScope()
-    val fileManager = remember { FileManager() }
+    val fileManager = remember { FileManager.getInstance(state.pubicKey) }
     Text(text = "Change extension")
     LazyRow(
         modifier = Modifier

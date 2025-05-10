@@ -6,8 +6,7 @@ import kotlinx.coroutines.withContext
 import java.awt.FileDialog
 import java.io.File
 import java.security.KeyFactory
-import java.security.KeyPair
-import java.security.KeyPairGenerator
+import java.security.PublicKey
 import java.security.SecureRandom
 import java.security.spec.X509EncodedKeySpec
 import javax.crypto.Cipher
@@ -16,13 +15,14 @@ import javax.crypto.spec.SecretKeySpec
 
 internal actual class FileManager actual constructor() {
 
-    private lateinit var keyPair: KeyPair
+    private lateinit var publicKey: PublicKey
+    private var publicKeyString: String = ""
     private val ivSize = 16
     private val keySize = 256
     private val rsaKeySize = 2048
 
-    init {
-        initializeRSAKeys()
+    actual suspend fun generatePublicKey(): FileManager = apply {
+        loadRSAPublicKey()
     }
 
     actual suspend fun selectFile(): FileHandle? = withContext(Dispatchers.Main) {
@@ -41,7 +41,7 @@ internal actual class FileManager actual constructor() {
             } else {
                 null
             }
-        } catch (exception: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -56,21 +56,16 @@ internal actual class FileManager actual constructor() {
 
         return EncryptedData(
             encryptedContent = cipherAES(fileBytes, aesKey, iv),
-            encryptedAesKey = cipherRSA(aesKey, keyPair.public.encoded),
+            encryptedAesKey = cipherRSA(aesKey),
             iv = iv,
         )
     }
 
     private fun cipherRSA(
         fileBytes: ByteArray,
-        publicKey: ByteArray,
     ): ByteArray {
-        val keySpec = X509EncodedKeySpec(publicKey)
-        val keyFactory = KeyFactory.getInstance("RSA")
-        val publicKeyGenerated = keyFactory.generatePublic(keySpec)
-
         val cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding")
-        cipher.init(Cipher.ENCRYPT_MODE, publicKeyGenerated)
+        cipher.init(Cipher.ENCRYPT_MODE, publicKey)
         return cipher.doFinal(fileBytes)
     }
 
@@ -124,11 +119,24 @@ internal actual class FileManager actual constructor() {
 
     }
 
-    private fun initializeRSAKeys() {
-        val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
-        keyPairGenerator.initialize(rsaKeySize)
-        keyPair = keyPairGenerator.generateKeyPair()
+    private fun loadRSAPublicKey() {
+        try {
+            val publicKeyB64 = publicKeyString
+                .replace("-----BEGIN PUBLIC KEY-----", "")
+                .replace("-----END PUBLIC KEY-----", "")
+                .replace("\n", "")
+                .replace("\r", "")
+
+            val keyBytes = java.util.Base64.getDecoder().decode(publicKeyB64)
+
+            val keySpec = X509EncodedKeySpec(keyBytes)
+            val keyFactory = KeyFactory.getInstance("RSA")
+            publicKey = keyFactory.generatePublic(keySpec)
+        } catch (e: Exception) {
+            println("Error al cargar la clave pública RSA: ${e.message}")
+        }
     }
+
 
     private fun serializeKeyData(keyData: KeyData): ByteArray {
         return buildList {
@@ -137,5 +145,14 @@ internal actual class FileManager actual constructor() {
             addAll(keyData.iv.toList())
         }.toByteArray()
     }
+
+    actual companion object {
+        actual fun getInstance(publicKeyString: String): FileManager {
+            return FileManager().apply {
+                this.publicKeyString = publicKeyString
+            }
+        }
+    }
+
 
 }

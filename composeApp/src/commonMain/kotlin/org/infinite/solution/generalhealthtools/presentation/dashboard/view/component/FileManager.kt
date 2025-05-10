@@ -1,6 +1,7 @@
 package org.infinite.solution.generalhealthtools.presentation.dashboard.view.component
 
-internal expect class FileManager() {
+internal expect class FileManager private constructor() {
+    suspend fun generatePublicKey(): FileManager
     suspend fun selectFile(): FileHandle?
     suspend fun encryptFile(fileBytes: ByteArray): EncryptedData
     suspend fun saveEncryptedFile(encryptedData: EncryptedData, fileName: String): Boolean
@@ -9,6 +10,10 @@ internal expect class FileManager() {
         fileName: String,
         newFileExtension: String,
     )
+
+    companion object{
+        fun getInstance(publicKeyString: String): FileManager
+    }
 }
 
 data class FileHandle(

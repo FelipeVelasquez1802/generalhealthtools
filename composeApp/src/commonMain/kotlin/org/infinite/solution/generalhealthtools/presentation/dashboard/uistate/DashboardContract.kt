@@ -3,6 +3,7 @@ package org.infinite.solution.generalhealthtools.presentation.dashboard.uistate
 import org.infinite.solution.generalhealthtools.presentation.common.extension.Empty
 import org.infinite.solution.generalhealthtools.presentation.common.uimodel.ErrorUiModel
 import org.infinite.solution.generalhealthtools.presentation.dashboard.view.component.FileHandle
+import org.infinite.solution.generalhealthtools.presentation.dashboard.view.component.FileManager
 import org.infinite.solution.generalhealthtools.presentation.dashboard.viewmodel.MenuDashboard
 
 internal sealed interface DashboardContract {
@@ -16,6 +17,8 @@ internal sealed interface DashboardContract {
 
         val fileHandle: FileHandle? = null,
         val newFileExtension: String = String.Empty,
+        val pubicKey: String = String.Empty,
+        val fileManager: FileManager? = null,
     )
 
     sealed interface Event {
