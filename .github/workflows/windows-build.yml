@@ -1,4 +1,4 @@
-name: Windows Build
+name: General Health Tools Build
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
 
       - name: Create file from secret
         run: |
-          echo "${{ secrets.PUBLIC_KEY_MALLA }}" > composeApp/src/commonMain/composeResources/files/rsa_public_mlls.pem
+          echo "${{ secrets.PUBLIC_KEY_MALLA }}" > src/commonMain/composeResources/files/rsa_public_mlls.pem
 
       - name: Set up JDK
         uses: actions/setup-java@v3
