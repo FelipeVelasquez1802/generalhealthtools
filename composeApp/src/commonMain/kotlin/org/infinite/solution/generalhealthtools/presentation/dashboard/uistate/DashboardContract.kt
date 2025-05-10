@@ -17,7 +17,7 @@ internal sealed interface DashboardContract {
 
         val fileHandle: FileHandle? = null,
         val newFileExtension: String = String.Empty,
-        val pubicKey: String = String.Empty,
+        val pubicKey: ByteArray = ByteArray(0),
         val fileManager: FileManager? = null,
     )
 

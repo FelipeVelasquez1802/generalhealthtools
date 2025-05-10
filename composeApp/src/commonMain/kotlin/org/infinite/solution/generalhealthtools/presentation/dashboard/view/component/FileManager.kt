@@ -12,7 +12,7 @@ internal expect class FileManager private constructor() {
     )
 
     companion object{
-        fun getInstance(publicKeyString: String): FileManager
+        fun getInstance(publicKeyByteArray: ByteArray): FileManager
     }
 }
 
@@ -23,8 +23,8 @@ data class FileHandle(
 )
 
 data class EncryptedData(
-    val encryptedContent: ByteArray,
-    val encryptedAesKey: ByteArray,
+    val cipherAes: ByteArray,
+    val cipherRsa: ByteArray,
     val iv: ByteArray,
 )
 

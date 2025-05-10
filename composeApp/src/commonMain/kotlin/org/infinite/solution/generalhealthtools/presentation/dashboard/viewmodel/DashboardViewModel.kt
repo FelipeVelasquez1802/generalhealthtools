@@ -4,6 +4,7 @@ import generalhealthtools.composeapp.generated.resources.Res.string
 import generalhealthtools.composeapp.generated.resources.error_general_message
 import kotlinx.coroutines.flow.update
 import org.infinite.solution.generalhealthtools.presentation.common.uimodel.ErrorUiModel
+import org.infinite.solution.generalhealthtools.presentation.common.util.readPemKey
 import org.infinite.solution.generalhealthtools.presentation.common.util.readResource
 import org.infinite.solution.generalhealthtools.presentation.common.viewmodel.CommonViewModel
 import org.infinite.solution.generalhealthtools.presentation.dashboard.uistate.DashboardContract
@@ -51,7 +52,7 @@ internal class DashboardViewModel :
                 totalPages = MenuDashboard.entries.size,
                 selectedPage = 0,
                 menu = MenuDashboard.entries.toList(),
-                pubicKey = readResource("files/rsa_public_mlls.pem")
+                pubicKey = readPemKey("files/rsa_public_mlls.pem")
             )
         }
         mutableUiState.update { state ->

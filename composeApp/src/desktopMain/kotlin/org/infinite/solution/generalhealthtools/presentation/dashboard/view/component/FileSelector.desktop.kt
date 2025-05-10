@@ -9,17 +9,16 @@ import java.security.KeyFactory
 import java.security.PublicKey
 import java.security.SecureRandom
 import java.security.spec.X509EncodedKeySpec
+import java.util.Base64
 import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
 import javax.crypto.spec.IvParameterSpec
-import javax.crypto.spec.SecretKeySpec
 
 internal actual class FileManager actual constructor() {
 
     private lateinit var publicKey: PublicKey
-    private var publicKeyString: String = ""
-    private val ivSize = 16
-    private val keySize = 256
-    private val rsaKeySize = 2048
+    private var publicKeyByteArray: ByteArray = ByteArray(0)
 
     actual suspend fun generatePublicKey(): FileManager = apply {
         loadRSAPublicKey()
@@ -46,39 +45,35 @@ internal actual class FileManager actual constructor() {
         }
     }
 
-
     actual suspend fun encryptFile(fileBytes: ByteArray): EncryptedData {
-        val aesKey = ByteArray(keySize / 8)
-        SecureRandom().nextBytes(aesKey)
-
-        val iv = ByteArray(ivSize)
-        SecureRandom().nextBytes(iv)
+        val keyGen = KeyGenerator.getInstance("AES")
+        keyGen.init(256)
+        val aesKey = keyGen.generateKey()
+        val iv = ByteArray(16).apply { SecureRandom().nextBytes(this) }
 
         return EncryptedData(
-            encryptedContent = cipherAES(fileBytes, aesKey, iv),
-            encryptedAesKey = cipherRSA(aesKey),
+            cipherAes = cipherAES(fileBytes, aesKey, iv),
+            cipherRsa = cipherRSA(aesKey),
             iv = iv,
         )
     }
 
-    private fun cipherRSA(
-        fileBytes: ByteArray,
-    ): ByteArray {
-        val cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding")
-        cipher.init(Cipher.ENCRYPT_MODE, publicKey)
-        return cipher.doFinal(fileBytes)
-    }
-
     private fun cipherAES(
         fileBytes: ByteArray,
-        encryptedAesKey: ByteArray,
+        encryptedAesKey: SecretKey,
         iv: ByteArray
     ): ByteArray {
-        val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
-        val secretKeySpec = SecretKeySpec(encryptedAesKey, "AES")
-        val ivParameterSpec = IvParameterSpec(iv)
-        cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, ivParameterSpec)
-        return cipher.doFinal(fileBytes)
+        val aesCipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
+        aesCipher.init(Cipher.ENCRYPT_MODE, encryptedAesKey, IvParameterSpec(iv))
+        return aesCipher.doFinal(fileBytes)
+    }
+
+    private fun cipherRSA(
+        fileBytes: SecretKey,
+    ): ByteArray {
+        val cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding")
+        cipher.init(Cipher.ENCRYPT_MODE, publicKey)
+        return cipher.doFinal(fileBytes.encoded)
     }
 
     actual suspend fun saveEncryptedFile(
@@ -94,14 +89,10 @@ internal actual class FileManager actual constructor() {
             if (saveDialog.file != null) {
                 val outputFile = File(saveDialog.directory, saveDialog.file)
 
-                outputFile.writeBytes(encryptedData.encryptedContent)
+                outputFile.writeBytes(encryptedData.cipherAes)
 
                 val keyFile = File(saveDialog.directory, "${fileName}.key")
-                val keyData = KeyData(
-                    encryptedAesKey = encryptedData.encryptedAesKey,
-                    iv = encryptedData.iv,
-                )
-                keyFile.writeBytes(serializeKeyData(keyData))
+                keyFile.writeBytes(encryptedData.cipherRsa)
                 true
             } else {
                 false
@@ -121,17 +112,15 @@ internal actual class FileManager actual constructor() {
 
     private fun loadRSAPublicKey() {
         try {
-            val publicKeyB64 = publicKeyString
+            val pemContent = String(publicKeyByteArray)
                 .replace("-----BEGIN PUBLIC KEY-----", "")
                 .replace("-----END PUBLIC KEY-----", "")
                 .replace("\n", "")
-                .replace("\r", "")
+                .trim()
 
-            val keyBytes = java.util.Base64.getDecoder().decode(publicKeyB64)
-
+            val keyBytes = Base64.getDecoder().decode(pemContent)
             val keySpec = X509EncodedKeySpec(keyBytes)
-            val keyFactory = KeyFactory.getInstance("RSA")
-            publicKey = keyFactory.generatePublic(keySpec)
+            publicKey = KeyFactory.getInstance("RSA").generatePublic(keySpec)
         } catch (e: Exception) {
             println("Error al cargar la clave pública RSA: ${e.message}")
         }
@@ -147,9 +136,9 @@ internal actual class FileManager actual constructor() {
     }
 
     actual companion object {
-        actual fun getInstance(publicKeyString: String): FileManager {
+        actual fun getInstance(publicKeyByteArray: ByteArray): FileManager {
             return FileManager().apply {
-                this.publicKeyString = publicKeyString
+                this.publicKeyByteArray = publicKeyByteArray
             }
         }
     }

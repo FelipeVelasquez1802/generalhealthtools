@@ -8,3 +8,6 @@ internal suspend fun readResource(path: String): String {
     val countriesResource = Res.readBytes(path)
     return countriesResource.decodeToString().trim()
 }
+
+@OptIn(ExperimentalResourceApi::class)
+internal suspend fun readPemKey(path: String): ByteArray = Res.readBytes(path)
