@@ -14,9 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Create file from secret
-        run: |
-          echo "${{ secrets.PUBLIC_KEY_MALLA }}" > src/commonMain/composeResources/files/rsa_public_mlls.pem
+#      - name: Create file from secret
+#        run: |
+#          echo "${{ secrets.PUBLIC_KEY_MALLA }}" > src/commonMain/composeResources/files/rsa_public_mlls.pem
 
       - name: Set up JDK
         uses: actions/setup-java@v3
